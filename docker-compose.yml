@@ -1,0 +1,25 @@
+services:
+  backend:
+    build: ./backend
+    # Prefer to read values from .env; supply sane defaults so compose doesn't warn
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_API_URL=${GROQ_API_URL:-https://api.groq.ai/v1/generate}
+      - GROQ_MODEL=${GROQ_MODEL:-groq-1}
+    # Temporary DNS override to work around host/container DNS resolution issues.
+    # If your environment has a custom DNS or VPN, you may want to remove this later.
+    dns:
+      - 8.8.8.8
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend

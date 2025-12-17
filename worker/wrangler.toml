@@ -1,0 +1,8 @@
+name = "groq-proxy"
+compatibility_date = "2025-12-14"
+main = "index.js"
+
+[vars]
+# Optional defaults; override using Wrangler secrets in production
+# GROQ_API_URL = "https://api.groq.ai/v1/generate"
+# GROQ_MODEL = "groq-1"
