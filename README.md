@@ -6,113 +6,89 @@ This repository contains a production-ready scaffold for an AI Agent application
 
 - Frontend: React (Vite)
 - Backend: FastAPI calling OpenAI
-- Containerized with Docker and docker-compose
-- CI/CD template with GitHub Actions to build & push Docker images (placeholders for secrets)
+# AI Agent — React + FastAPI + GROQ
 
-Quickstart (local, using Docker)
+A deployable interview/demo showcasing a small, opinionated AI agent built with modern tooling.
 
-1. Copy `.env.example` to `.env` and set `OPENAI_API_KEY`.
-2. Run:
+This repo is designed to be a launchpad for interviews and demos: it pairs a fast React + Vite frontend with a compact FastAPI backend that orchestrates calls to GROQ (the LLM provider). Everything is containerized and set up for CI/CD and Cloud Run deployment. Secrets are stored in Google Secret Manager and injected at runtime.
 
-```powershell
-# from repository root
-docker-compose up --build
-```
+Live demo
+-- Frontend (Cloud Run): https://test-frontend-329621052662.us-central1.run.app
+-- Backend (Cloud Run):  https://test-backend-nb6x3zkdwq-uc.a.run.app
 
-- Frontend will be exposed on http://localhost:3000
-- Backend API on http://localhost:8000 (used by frontend)
+If you see errors or the service is down, check your Cloud Run console for the current URLs.
 
-## Deployment — Live (Cloud Run)
+Highlights
+- Small, focused codebase that demonstrates:
+  - Integrating a custom LLM provider (GROQ) from FastAPI
+  - Containerized frontend and backend (Docker multi-stage builds)
+  - CI/CD-ready pipeline and Cloud Run deployment
+  - Proper secret handling using Google Secret Manager
 
-This project is deployed to Google Cloud Run (no custom domain required). Use the URLs below to access the running demo:
-
-- Frontend: https://test-frontend-329621052662.us-central1.run.app
-- Backend:  https://test-backend-329621052662.us-central1.run.app
-
-Quick demo steps:
-
-1. Open the frontend URL in a browser to load the app.
-2. The frontend communicates with the backend at the backend URL. If you inspect network calls (DevTools) you should see requests to `/api/` endpoints.
-3. Health check:
+Quick local run (recommended for development)
+1) Copy the example env and add secrets locally (DO NOT commit `.env`):
 
 ```powershell
-curl -s https://test-backend-329621052662.us-central1.run.app/api/health
-# expected output: {"status":"ok"}
+copy .\.env.example .\.env
+# edit .env and fill in GROQ_API_KEY locally
 ```
 
-Notes:
-- The backend has CORS configured to accept requests from the deployed frontend URL.
-- Secrets (GROQ_API_KEY) are stored in Secret Manager and attached to the backend service.
-
-Local dev (frontend)
-
-```powershell
-cd frontend
-npm install
-# set VITE_API_URL during dev if backend URL differs
-npm run dev
-```
-
-- Replace the OpenAI usage with the Chat API if you prefer a chat-style agent.
-
-# AI Agent (React frontend + FastAPI backend using GROQ)
-
-This project is a minimal deployment-ready template combining a React (Vite) frontend and a FastAPI backend which calls GROQ AI.
-
-Features
-
-- React + Vite frontend (Docker multi-stage build with nginx)
-- FastAPI backend with an `/api/ai` endpoint that calls GROQ AI and `/api/health` healthcheck
-- docker-compose for local development
-- GitHub Actions workflow to build & push Docker images
-
-Environment
-
-- Create a `.env` file at the repository root (copy `.env.example`) and set:
-  - `GROQ_API_KEY` — your GROQ API key
-  - Optional: `GROQ_API_URL` if you have a custom endpoint
-  - Optional: `GROQ_MODEL` to select a model
-
-Local development with Docker Compose
-
-1. Copy `.env.example` -> `.env` and fill in `GROQ_API_KEY`.
-2. From the project root (where `docker-compose.yml` lives):
+2) Start services with Docker Compose:
 
 ```powershell
 docker-compose up --build
 ```
 
-- Backend will be available at http://localhost:8000
-- Frontend will be available at http://localhost:3000 (served from nginx)
+- Frontend: http://localhost:3000
+- Backend:  http://localhost:8000
 
-Run backend tests locally (without Docker)
+Run backend tests
 
 ```powershell
 cd backend
-python -m venv venv
-.\venv\Scripts\Activate.ps1
+python -m venv .venv
+.\\.venv\\Scripts\\Activate.ps1
 pip install -r requirements.txt
 pytest -q
 ```
 
-Notes on GROQ integration
+Environment variables
+- The backend reads these env vars:
+  - `GROQ_API_KEY` (required in production — use Secret Manager)
+  - `GROQ_API_URL` (optional)
+  - `GROQ_MODEL` (optional)
 
-- The backend reads `GROQ_API_KEY`, `GROQ_API_URL`, and `GROQ_MODEL` from environment variables.
-- The code uses a plain HTTP POST to the GROQ endpoint; payload and response parsing include flexible fallbacks since providers differ in their JSON shapes.
+Secrets & deployment (short guide)
+1) Store sensitive keys in Google Secret Manager (example name: `GROQ_API_KEY`).
+2) Grant the Cloud Run runtime service account the role `roles/secretmanager.secretAccessor`.
+3) Attach the secret to Cloud Run with `gcloud run services update <SERVICE> --update-secrets=GROQ_API_KEY=projects/<PROJECT_NUM>/secrets/GROQ_API_KEY:latest`.
 
-CI / CD
+This repository includes a `cloudbuild.deploy.yaml` example that demonstrates building images and deploying to Cloud Run while wiring secrets from Secret Manager.
 
-- The workflow in `.github/workflows/ci-cd.yml` builds and pushes Docker images to Docker Hub using secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
-- Add additional deployment steps for your target cloud (Cloud Run, Render, Azure App Service, etc.).
+Architecture at a glance
+- Frontend: React + Vite (static build served by nginx in Docker)
+- Backend: FastAPI (uvicorn) — small router with `/api/health` and `/api/ai` endpoints
+- LLM: GROQ — called by the backend; responses are parsed with flexible fallbacks
+- CI/CD: Cloud Build / GitHub Actions examples included
 
-Security
+Usage notes and tips
+- Never commit real API keys. Use `.env.example` with placeholders.
+- Rotate keys immediately if a secret is leaked. Use Secret Manager versions to roll keys safely.
+- When testing locally, set `VITE_API_URL` to point at your local backend (for dev server).
 
-- Do NOT commit your `.env` or any secret keys into git. Use repository secrets for CI and cloud credentials.
+Demo checklist (what reviewers will look for)
+- Clean separation between frontend and backend
+- Secrets are injected at runtime from Secret Manager
+- Docker images build reproducibly and deploy to Cloud Run
+- Unit tests for backend logic (pytest)
 
-Next steps I can do for you
+Contributing
+- Open an issue or a pull request. Keep changes small and add tests for new behavior.
 
-- Wire automatic deploy to a cloud provider (pick Cloud Run, Render, Azure, or AWS ECS)
-- Switch the backend to a streaming Chat-like interface if GROQ supports one
-- Add authentication, rate-limiting, or prototype a usage dashboard
+License
+- MIT
 
-If you'd like me to add a cloud deploy step now, tell me which provider to target and I will add it to the workflow and provide required secrets/instructions.
+Contact
+- Questions or help? Open an issue or reach out to the repo owner.
+
+Enjoy — build something awesome!
